@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Professional eBook Maker</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Poppins:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Markdown Parser (Showdown) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+    
+    <!-- PDF Generator (html2pdf.js) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8; 
+        }
+
+        /* A4 Page Simulation */
+        .a4-page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            margin: 0 auto;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            background: white;
+            position: relative;
+        }
+
+        /* Theme: Minimalist White */
+        .theme-minimalist {
+            font-family: 'Merriweather', serif;
+            color: #333;
+            line-height: 1.6;
+        }
+        .theme-minimalist h1 { font-family: 'Poppins', sans-serif; color: #111; font-weight: 700; }
+        .theme-minimalist h2 { font-family: 'Poppins', sans-serif; color: #444; font-weight: 600; margin-top: 2rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
+        .theme-minimalist p { margin-bottom: 1rem; text-align: justify; }
+        .theme-minimalist blockquote { border-left: 4px solid #0ea5e9; padding-left: 1rem; font-style: italic; color: #555; }
+        
+        /* Theme: Classic Serif */
+        .theme-classic {
+            font-family: 'Lora', serif;
+            color: #2c2c2c;
+            line-height: 1.8;
+        }
+        .theme-classic h1 { font-family: 'Times New Roman', serif; color: #800000; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .theme-classic h2 { font-family: 'Times New Roman', serif; color: #4a0000; font-weight: bold; font-style: italic; margin-top: 2rem; }
+        .theme-classic p { margin-bottom: 1.2rem; text-align: justify; }
+        .theme-classic blockquote { border-left: 3px double #800000; padding-left: 1rem; font-style: italic; background: #faf9f6; padding: 1rem; }
+
+        /* Theme: Modern Dark */
+        .theme-dark {
+            font-family: 'Poppins', sans-serif;
+            background-color: #1a1a1a !important;
+            color: #e0e0e0;
+            line-height: 1.7;
+        }
+        .theme-dark h1 { color: #ffffff; border-bottom: 2px solid #0ea5e9; padding-bottom: 10px; }
+        .theme-dark h2 { color: #0ea5e9; margin-top: 2rem; }
+        .theme-dark p { margin-bottom: 1rem; color: #cccccc; }
+        .theme-dark blockquote { background: #333; border-left: 4px solid #0ea5e9; padding: 1rem; color: #fff; }
+        .theme-dark .page-cover { background: #000000; color: white; }
+        .theme-dark .page-content { background: #1a1a1a; color: #e0e0e0; }
+
+        /* Helper for Print/PDF */
+        .pdf-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+            background: #525659; /* Acrobat Reader grey */
+        }
+
+        /* Markdown Image styling */
+        .preview-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin: 1rem 0;
+            display: block;
+        }
+        .preview-content ul, .preview-content ol {
+            margin-bottom: 1rem;
+            padding-left: 2rem;
+        }
+        .preview-content li {
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Loader */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #0ea5e9;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 h-screen overflow-hidden flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 shadow-sm z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white font-bold">eB</div>
+            <h1 class="text-xl font-bold font-poppins text-gray-800">eBook Maker</h1>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+                <label for="themeSelect" class="text-sm font-medium text-gray-600">Theme:</label>
+                <select id="themeSelect" class="bg-gray-100 border border-gray-300 text-gray-700 text-sm rounded-md focus:ring-brand-500 focus:border-brand-500 block p-2">
+                    <option value="theme-minimalist">Minimalist White</option>
+                    <option value="theme-classic">Classic Serif</option>
+                    <option value="theme-dark">Modern Dark</option>
+                </select>
+            </div>
+            
+            <button id="downloadBtn" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-900 text-white font-semibold py-2 px-4 rounded-md transition-all shadow-md flex items-center">
+                <span id="btnText">Download PDF</span>
+                <div id="btnLoader" class="loader w-4 h-4 border-2 border-white border-t-transparent"></div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Panel: Editor -->
+        <section class="w-1/3 min-w-[400px] flex flex-col border-r border-gray-200 bg-white z-10">
+            <div class="p-4 bg-gray-50 border-b border-gray-200">
+                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Book Metadata</h2>
+                <div class="grid gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Book Title</label>
+                        <input type="text" id="inputTitle" placeholder="The Art of Coding" class="w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm p-2 border" value="The Art of Coding">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Author Name</label>
+                        <input type="text" id="inputAuthor" placeholder="Jane Doe" class="w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm p-2 border" value="Jane Doe">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Cover Image URL</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="inputCover" placeholder="https://..." class="w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm p-2 border" value="https://picsum.photos/seed/ebookcover/800/1200.jpg">
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-1">Leave empty for a text-only cover.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex-1 flex flex-col p-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Content (Markdown)</h2>
+                    <span class="text-xs text-gray-400">Supports #, **, >, -</span>
+                </div>
+                <textarea id="inputBody" class="flex-1 w-full p-3 font-mono text-sm border border-gray-300 rounded-md focus:ring-brand-500 focus:border-brand-500 resize-none leading-relaxed" placeholder="Write your chapter content here..."># Introduction
+
+Welcome to this **amazing eBook**. This tool allows you to write in Markdown and instantly see how it looks as a formatted book.
+
+## Why Markdown?
+
+Markdown is lightweight and easy to read. It focuses on content rather than distraction.
+
+### Key Features
+- Fast conversion
+- Professional typography
+- Multiple themes
+
+> "The best way to predict the future is to invent it." — Alan Kay
+
+## Getting Started
+
+Simply start typing on the left, and watch the magic happen on the right. You can add images using standard Markdown syntax.
+
+![Sample Image](https://picsum.photos/seed/sample/600/300)
+
+## Conclusion
+
+Thank you for trying this tool. Happy writing!</textarea>
+            </div>
+        </section>
+
+        <!-- Right Panel: Live Preview -->
+        <section class="flex-1 bg-gray-200 overflow-y-auto relative" id="previewContainer">
+            <!-- This wrapper is what we will actually print -->
+            <div id="pdfWrapper" class="pdf-container min-h-full">
+                
+                <!-- Cover Page -->
+                <div id="pageCover" class="a4-page theme-minimalist page-cover flex flex-col justify-between items-center text-center overflow-hidden relative">
+                    <div class="absolute inset-0 bg-cover bg-center opacity-20" id="coverBgImage" style="background-image: url('https://picsum.photos/seed/ebookcover/800/1200.jpg');"></div>
+                    <div class="z-10 flex-1 flex flex-col justify-center items-center w-full max-w-2xl px-10">
+                        <div id="coverImageContainer" class="mb-8 hidden">
+                            <img id="coverImgDisplay" src="" alt="Cover" class="max-h-64 shadow-2xl object-cover">
+                        </div>
+                        <h1 id="previewTitle" class="text-5xl mb-4 leading-tight">The Art of Coding</h1>
+                        <div class="w-16 h-1 bg-current mb-6 opacity-50"></div>
+                        <p id="previewAuthor" class="text-2xl font-light tracking-widest uppercase opacity-80">Jane Doe</p>
+                    </div>
+                    <div class="z-10 mb-10 text-sm opacity-60">
+                        &copy; <span id="yearDisplay"></span> All Rights Reserved
+                    </div>
+                </div>
+
+                <!-- Content Page 1 -->
+                <div id="pageContent" class="a4-page theme-minimalist page-content">
+                    <div id="previewBody" class="preview-content">
+                        <!-- Content injected here -->
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-3 rounded-md shadow-lg transform translate-y-20 transition-transform duration-300 flex items-center gap-3 z-50">
+        <div class="bg-green-500 rounded-full p-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div>
+            <h4 class="font-bold text-sm">Success</h4>
+            <p class="text-xs text-gray-300">PDF generation started.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Elements
+            const inputTitle = document.getElementById('inputTitle');
+            const inputAuthor = document.getElementById('inputAuthor');
+            const inputCover = document.getElementById('inputCover');
+            const inputBody = document.getElementById('inputBody');
+            
+            const previewTitle = document.getElementById('previewTitle');
+            const previewAuthor = document.getElementById('previewAuthor');
+            const previewBody = document.getElementById('previewBody');
+            const coverImgDisplay = document.getElementById('coverImgDisplay');
+            const coverBgImage = document.getElementById('coverBgImage');
+            const coverImageContainer = document.getElementById('coverImageContainer');
+            const yearDisplay = document.getElementById('yearDisplay');
+            
+            const themeSelect = document.getElementById('themeSelect');
+            const pageCover = document.getElementById('pageCover');
+            const pageContent = document.getElementById('pageContent');
+            
+            const downloadBtn = document.getElementById('downloadBtn');
+            const btnText = document.getElementById('btnText');
+            const btnLoader = document.getElementById('btnLoader');
+            const toast = document.getElementById('toast');
+
+            // Set current year
+            yearDisplay.textContent = new Date().getFullYear();
+
+            // Initialize Showdown Converter
+            const converter = new showdown.Converter({
+                parseImgDimensions: true,
+                simplifiedAutoLink: true,
+                openLinksInNewWindow: true
+            });
+
+            // State
+            let currentTheme = 'theme-minimalist';
+
+            // --- Core Functions ---
+
+            function updatePreview() {
+                // Update Text Fields
+                previewTitle.textContent = inputTitle.value || 'Untitled Book';
+                previewAuthor.textContent = inputAuthor.value || 'Unknown Author';
+                
+                // Convert Markdown to HTML
+                const html = converter.makeHtml(inputBody.value);
+                previewBody.innerHTML = html;
+
+                // Handle Cover Image
+                const url = inputCover.value.trim();
+                if (url) {
+                    coverImgDisplay.src = url;
+                    coverBgImage.style.backgroundImage = `url('${url}')`;
+                    coverImageContainer.classList.remove('hidden');
+                    
+                    // Fallback for broken images
+                    coverImgDisplay.onerror = function() {
+                        coverImageContainer.classList.add('hidden');
+                        coverBgImage.style.backgroundImage = 'none';
+                    };
+                } else {
+                    coverImageContainer.classList.add('hidden');
+                    coverBgImage.style.backgroundImage = 'none';
+                }
+            }
+
+            function updateTheme(theme) {
+                // Remove existing theme classes
+                pageCover.classList.remove('theme-minimalist', 'theme-classic', 'theme-dark');
+                pageContent.classList.remove('theme-minimalist', 'theme-classic', 'theme-dark');
+                
+                // Add new theme classes
+                pageCover.classList.add(theme);
+                pageContent.classList.add(theme);
+                
+                currentTheme = theme;
+            }
+
+            function showToast(message) {
+                const p = toast.querySelector('p');
+                p.textContent = message;
+                toast.classList.remove('translate-y-20');
+                setTimeout(() => {
+                    toast.classList.add('translate-y-20');
+                }, 3000);
+            }
+
+            // --- PDF Generation Logic ---
+
+            function generatePDF() {
+                // UI Feedback
+                downloadBtn.disabled = true;
+                btnText.textContent = 'Generating...';
+                btnLoader.style.display = 'block';
+
+                const element = document.getElementById('pdfWrapper');
+                
+                // PDF Options
+                const opt = {
+                    margin:       0,
+                    filename:     (inputTitle.value.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'ebook') + '.pdf',
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { 
+                        scale: 2, // Higher scale for better resolution
+                        useCORS: true, // Essential for loading external images
+                        letterRendering: true,
+                        scrollY: 0
+                    },
+                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+                };
+
+                // Temporarily adjust wrapper for clean capture
+                const originalWidth = element.style.width;
+                const originalMinHeight = element.style.minHeight;
+                element.style.width = '100%'; // Ensure full width for capture
+                element.style.minHeight = 'auto';
+
+                html2pdf().set(opt).from(element).save().then(() => {
+                    // Restore UI
+                    downloadBtn.disabled = false;
+                    btnText.textContent = 'Download PDF';
+                    btnLoader.style.display = 'none';
+                    element.style.width = originalWidth;
+                    element.style.minHeight = originalMinHeight;
+                    showToast('PDF Downloaded successfully!');
+                }).catch(err => {
+                    console.error(err);
+                    downloadBtn.disabled = false;
+                    btnText.textContent = 'Download PDF';
+                    btnLoader.style.display = 'none';
+                    showToast('Error generating PDF.');
+                });
+            }
+
+            // --- Event Listeners ---
+
+            // Live typing updates
+            [inputTitle, inputAuthor, inputCover, inputBody].forEach(el => {
+                el.addEventListener('input', updatePreview);
+            });
+
+            // Theme change
+            themeSelect.addEventListener('change', (e) => {
+                updateTheme(e.target.value);
+            });
+
+            // Download click
+            downloadBtn.addEventListener('click', generatePDF);
+
+            // Initial run
+            updatePreview();
+        });
+    </script>
+</body>
+</html>
