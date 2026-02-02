@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="bn" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>বাংলা গল্প সৃষ্টিকর্তা</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&amp;family=Galada&amp;display=swap" rel="stylesheet">
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+    
+    * {
+      font-family: 'Hind Siliguri', sans-serif;
+    }
+    
+    .decorative-font {
+      font-family: 'Galada', cursive;
+    }
+    
+    .story-card {
+      transition: all 0.3s ease;
+      border-left: 4px solid transparent;
+    }
+    
+    .story-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    
+    .prompt-card {
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .prompt-card:hover {
+      transform: scale(1.02);
+    }
+    
+    .category-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    
+    .fade-in {
+      animation: fadeIn 0.5s ease-in;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .slide-in {
+      animation: slideIn 0.4s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    
+    textarea {
+      resize: vertical;
+      min-height: 150px;
+    }
+    
+    .loading-spinner {
+      border: 3px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top: 3px solid white;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .empty-state {
+      opacity: 0.6;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="/_sdk/element_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full">
+  <div id="app" class="h-full w-full overflow-auto"></div>
+  <script>
+    // Local Storage Key
+    const STORAGE_KEY = 'bangla_stories_data';
+
+    const config = {
+      background_color: "#f0f4f8",
+      surface_color: "#ffffff",
+      text_color: "#1a202c",
+      primary_action_color: "#8b5cf6",
+      secondary_action_color: "#ec4899",
+      font_size: 16
+    };
+
+    const prompts = [
+      {
+        category: "কল্পবিজ্ঞান",
+        text: "২০৫০ সালের ঢাকা শহরের একটি দৃশ্য, যেখানে রিকশাগুলো আকাশে উড়ছে এবং একজন ছাত্র তার রোবট বন্ধুর সাথে স্কুলে যাচ্ছে।",
+        icon: "🚀"
+      },
+      {
+        category: "কল্পবিজ্ঞান",
+        text: "মঙ্গল গ্রহে মানুষের প্রথম বসতি এবং সেখানে জন্মানো প্রথম শিশুটির রোমাঞ্চকর অভিযান।",
+        icon: "🌌"
+      },
+      {
+        category: "কল্পবিজ্ঞান",
+        text: "এমন একটি পৃথিবী যেখানে মানুষ কথা না বলে মনের ভাব আদান-প্রদান করতে পারে, কিন্তু একদিন হঠাৎ একজন কথা বলে ওঠে।",
+        icon: "🧠"
+      },
+      {
+        category: "কল্পবিজ্ঞান",
+        text: "একটি পুরনো ল্যাপটপ যা হঠাৎ করে ভবিষ্যতের খবর দিতে শুরু করে।",
+        icon: "💻"
+      },
+      {
+        category: "রূপকথা",
+        text: "সুন্দরবনের গভীরে এমন একটি গ্রাম যেখানে বাঘ এবং মানুষ একে অপরের বন্ধু এবং তারা এক জাদুকরী শক্তির বিরুদ্ধে লড়ছে।",
+        icon: "🐅"
+      },
+      {
+        category: "রূপকথা",
+        text: "মেঘের রাজ্যে বাস করা একটি ছোট ছেলে, যে ভুল করে মাটিতে পড়ে যায় এবং বৃষ্টির ফোঁটার সাথে বন্ধুত্ব করে।",
+        icon: "☁️"
+      },
+      {
+        category: "রূপকথা",
+        text: "একটি জাদুকরী লাইব্রেরি যেখানে বই খুললেই পাঠক সেই গল্পের ভেতরে ঢুকে পড়ে।",
+        icon: "📚"
+      },
+      {
+        category: "রূপকথা",
+        text: "সমুদ্রের নিচে একটি লুকানো শহর, যেখানে মাছেরা মানুষের মতো কথা বলে এবং ফুটবল খেলে।",
+        icon: "🐠"
+      },
+      {
+        category: "শিক্ষামূলক",
+        text: "টাকার ইতিহাস: বিনিময় প্রথা থেকে বিটকয়েন পর্যন্ত একটি মুদ্রার আত্মজীবনী।",
+        icon: "💰"
+      },
+      {
+        category: "শিক্ষামূলক",
+        text: "একজন ব্যর্থ উদ্যোক্তা কীভাবে কৃত্রিম বুদ্ধিমত্তা বা এআই ব্যবহার করে তার গ্রামকে বদলে দিল।",
+        icon: "🤖"
+      },
+      {
+        category: "শিক্ষামূলক",
+        text: "সময়ানুবর্তিতা না মানায় একটি খরগোশ কীভাবে তার জাদুকরী ক্ষমতা হারিয়ে ফেলল।",
+        icon: "🐰"
+      },
+      {
+        category: "শিক্ষামূলক",
+        text: "প্লাস্টিক বর্জ্যের বিরুদ্ধে যুদ্ধ করা একদল সাহসী শিশুর গল্প যারা তাদের স্কুলকে আবর্জনামুক্ত করে।",
+        icon: "♻️"
+      },
+      {
+        category: "রহস্য",
+        text: "স্কুলের পুরনো ল্যাবে খুঁজে পাওয়া একটি ডায়েরি, যা পড়লে অদ্ভুত সব ঘটনা ঘটতে থাকে।",
+        icon: "📔"
+      },
+      {
+        category: "রহস্য",
+        text: "একজন ডিটেকটিভ বিড়াল যে তার মালিকের হারানো চশমা খুঁজতে গিয়ে এক বিশাল রহস্য সমাধান করে।",
+        icon: "🐱"
+      },
+      {
+        category: "রহস্য",
+        text: "ট্রেনের এমন একটি বগি যা যাত্রীদের তাদের অতীতে নিয়ে যায়।",
+        icon: "🚂"
+      },
+      {
+        category: "আবেগময়",
+        text: "একজন বৃদ্ধ দাদু এবং তার নাতনি, যারা চিঠির মাধ্যমে একে অপরকে নিজের তৈরি কাল্পনিক জগত সম্পর্কে জানায়।",
+        icon: "💌"
+      },
+      {
+        category: "আবেগময়",
+        text: "একটি রোবট যে মানুষের মতো আবেগ অনুভব করতে চায় এবং কান্নার অর্থ খোঁজার চেষ্টা করে।",
+        icon: "🤖"
+      },
+      {
+        category: "আবেগময়",
+        text: "গ্রাম থেকে শহরে আসা একটি ছেলের মানিয়ে নেওয়ার গল্প এবং তার নতুন বন্ধু।",
+        icon: "🏙️"
+      },
+      {
+        category: "বিমূর্ত",
+        text: "এমন একটি জগত যেখানে রং কথা বলে এবং শব্দ দেখা যায়।",
+        icon: "🎨"
+      },
+      {
+        category: "বিমূর্ত",
+        text: "একজন শিল্পী যার আঁকা ছবিগুলো রাতের বেলা জীবন্ত হয়ে ওঠে।",
+        icon: "🖼️"
+      }
+    ];
+
+    let currentView = 'home';
+    let stories = [];
+    let editingStoryId = null;
+    let currentStory = { title: '', category: '', prompt: '', story: '' };
+
+    const categoryColors = {
+      'কল্পবিজ্ঞান': '#3b82f6',
+      'রূপকথা': '#ec4899',
+      'শিক্ষামূলক': '#10b981',
+      'রহস্য': '#8b5cf6',
+      'আবেগময়': '#f59e0b',
+      'বিমূর্ত': '#06b6d4'
+    };
+
+    // Local Storage Functions
+    function loadStories() {
+      try {
+        const data = localStorage.getItem(STORAGE_KEY);
+        return data ? JSON.parse(data) : [];
+      } catch (e) {
+        console.error('Failed to load stories:', e);
+        return [];
+      }
+    }
+
+    function saveStories(storiesData) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(storiesData));
+        return true;
+      } catch (e) {
+        console.error('Failed to save stories:', e);
+        return false;
+      }
+    }
+
+    function init() {
+      stories = loadStories();
+      renderHome();
+    }
+
+    function renderHome() {
+      currentView = 'home';
+      const baseSize = config.font_size;
+      
+      const app = document.getElementById('app');
+      app.style.backgroundColor = config.background_color;
+      
+      app.innerHTML = `
+        <div class="min-h-full" style="background: linear-gradient(135deg, ${config.background_color} 0%, ${adjustColor(config.background_color, -10)} 100%);">
+          <div class="max-w-6xl mx-auto px-4 py-8">
+            <!-- Header -->
+            <header class="text-center mb-12 fade-in">
+              <h1 class="decorative-font mb-2" style="font-size: ${baseSize * 3}px; color: ${config.text_color};">
+                বাংলা গল্প সৃষ্টিকর্তা
+              </h1>
+              <p class="opacity-80" style="font-size: ${baseSize * 1.1}px; color: ${config.text_color};">
+                আপনার কল্পনাকে বাস্তবে রূপ দিন
+              </p>
+              <div class="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full" style="background-color: ${config.surface_color}; font-size: ${baseSize * 0.9}px; color: ${config.text_color};">
+                <span>📱 মোবাইল স্টোরেজ ব্যবহার করছে</span>
+              </div>
+            </header>
+
+            <!-- Action Buttons -->
+            <div class="grid md:grid-cols-3 gap-6 mb-12">
+              <button onclick="showCreateStory()" class="p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 slide-in" style="background-color: ${config.surface_color}; border-left: 6px solid ${config.primary_action_color};">
+                <div style="font-size: ${baseSize * 3}px; margin-bottom: 12px;">✍️</div>
+                <h3 style="font-size: ${baseSize * 1.3}px; font-weight: 600; margin-bottom: 8px; color: ${config.text_color};">
+                  নতুন গল্প লিখুন
+                </h3>
+                <p style="font-size: ${baseSize * 0.9}px; color: ${config.text_color}; opacity: 0.7;">
+                  আপনার নিজস্ব গল্প তৈরি করুন
+                </p>
+              </button>
+
+              <button onclick="showPrompts()" class="p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 slide-in" style="background-color: ${config.surface_color}; border-left: 6px solid ${config.secondary_action_color}; animation-delay: 0.1s;">
+                <div style="font-size: ${baseSize * 3}px; margin-bottom: 12px;">💡</div>
+                <h3 style="font-size: ${baseSize * 1.3}px; font-weight: 600; margin-bottom: 8px; color: ${config.text_color};">
+                  সৃজনশীল প্রম্পট
+                </h3>
+                <p style="font-size: ${baseSize * 0.9}px; color: ${config.text_color}; opacity: 0.7;">
+                  ২০টি অনুপ্রেরণামূলক আইডিয়া
+                </p>
+              </button>
+
+              <button onclick="showSavedStories()" class="p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 slide-in" style="background-color: ${config.surface_color}; border-left: 6px solid ${config.primary_action_color}; animation-delay: 0.2s;">
+                <div style="font-size: ${baseSize * 3}px; margin-bottom: 12px;">📚</div>
+                <h3 style="font-size: ${baseSize * 1.3}px; font-weight: 600; margin-bottom: 8px; color: ${config.text_color};">
+                  সংরক্ষিত গল্প
+                </h3>
+                <p style="font-size: ${baseSize * 0.9}px; color: ${config.text_color}; opacity: 0.7;">
+                  আপনার লেখা গল্পগুলো দেখুন (${stories.length})
+                </p>
+              </button>
+            </div>
+
+            <!-- Features -->
+            <div class="grid md:grid-cols-2 gap-6">
+              <div class="p-6 rounded-xl fade-in" style="background-color: ${config.surface_color}; animation-delay: 0.3s;">
+                <h4 style="font-size: ${baseSize * 1.2}px; font-weight: 600; margin-bottom: 12px; color: ${config.text_color};">
+                  🎯 অ্যাপের বৈশিষ্ট্য
+                </h4>
+                <ul style="font-size: ${baseSize}px; color: ${config.text_color}; opacity: 0.8; line-height: 1.8;">
+                  <li>✓ ২০টি বিভিন্ন ক্যাটাগরির প্রম্পট</li>
+                  <li>✓ সীমাহীন গল্প সংরক্ষণ করুন</li>
+                  <li>✓ গল্প সম্পাদনা ও মুছে ফেলুন</li>
+                  <li>✓ মোবাইল স্টোরেজে স্বয়ংক্রিয় সংরক্ষণ</li>
+                </ul>
+              </div>
+
+              <div class="p-6 rounded-xl fade-in" style="background-color: ${config.surface_color}; animation-delay: 0.4s;">
+                <h4 style="font-size: ${baseSize * 1.2}px; font-weight: 600; margin-bottom: 12px; color: ${config.text_color};">
+                  📝 লেখার টিপস
+                </h4>
+                <ul style="font-size: ${baseSize}px; color: ${config.text_color}; opacity: 0.8; line-height: 1.8;">
+                  <li>✓ প্রম্পট থেকে অনুপ্রেরণা নিন</li>
+                  <li>✓ চরিত্রকে জীবন্ত করুন</li>
+                  <li>✓ টুইস্ট যোগ করুন</li>
+                  <li>✓ আবেগের ছোঁয়া দিন</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function showPrompts() {
+      currentView = 'prompts';
+      const baseSize = config.font_size;
+      
+      const app = document.getElementById('app');
+      app.style.backgroundColor = config.background_color;
+      
+      app.innerHTML = `
+        <div class="min-h-full" style="background: linear-gradient(135deg, ${config.background_color} 0%, ${adjustColor(config.background_color, -10)} 100%);">
+          <div class="max-w-6xl mx-auto px-4 py-8">
+            <div class="flex items-center justify-between mb-8">
+              <button onclick="renderHome()" class="px-4 py-2 rounded-lg font-medium transition-colors" style="background-color: ${config.surface_color}; color: ${config.text_color}; font-size: ${baseSize}px;">
+                ← হোমে ফিরুন
+              </button>
+              <h2 class="decorative-font" style="font-size: ${baseSize * 2}px; color: ${config.text_color};">
+                সৃজনশীল প্রম্পট 💡
+              </h2>
+              <button onclick="showRandomPrompt()" class="px-4 py-2 rounded-lg font-medium transition-all" style="background-color: ${config.secondary_action_color}; color: white; font-size: ${baseSize}px;">
+                🎲 র‍্যান্ডম
+              </button>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6" id="prompts-container">
+              ${prompts.map((prompt, index) => `
+                <div class="prompt-card p-6 rounded-xl shadow-lg fade-in" style="background-color: ${config.surface_color}; animation-delay: ${index * 0.05}s; border-left: 4px solid ${categoryColors[prompt.category]};" onclick="usePrompt(${index})">
+                  <div class="flex items-start gap-4">
+                    <div style="font-size: ${baseSize * 2.5}px;">${prompt.icon}</div>
+                    <div class="flex-1">
+                      <span class="category-badge mb-2" style="background-color: ${categoryColors[prompt.category]}20; color: ${categoryColors[prompt.category]}; font-size: ${baseSize * 0.8}px;">
+                        ${prompt.category}
+                      </span>
+                      <p style="font-size: ${baseSize}px; line-height: 1.6; color: ${config.text_color};">
+                        ${prompt.text}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function showRandomPrompt() {
+      const randomIndex = Math.floor(Math.random() * prompts.length);
+      usePrompt(randomIndex);
+    }
+
+    function usePrompt(index) {
+      const prompt = prompts[index];
+      currentStory = {
+        title: '',
+        category: prompt.category,
+        prompt: prompt.text,
+        story: ''
+      };
+      showCreateStory();
+    }
+
+    function showCreateStory() {
+      currentView = 'create';
+      const baseSize = config.font_size;
+      
+      const app = document.getElementById('app');
+      app.style.backgroundColor = config.background_color;
+      
+      const isEditing = editingStoryId !== null;
+      let story = currentStory;
+      
+      if (isEditing) {
+        story = stories.find(s => s.id === editingStoryId) || currentStory;
+      }
+      
+      app.innerHTML = `
+        <div class="min-h-full" style="background: linear-gradient(135deg, ${config.background_color} 0%, ${adjustColor(config.background_color, -10)} 100%);">
+          <div class="max-w-4xl mx-auto px-4 py-8">
+            <div class="flex items-center justify-between mb-8">
+              <button onclick="${isEditing ? 'showSavedStories()' : 'renderHome()'}" class="px-4 py-2 rounded-lg font-medium transition-colors" style="background-color: ${config.surface_color}; color: ${config.text_color}; font-size: ${baseSize}px;">
+                ← ফিরে যান
+              </button>
+              <h2 class="decorative-font" style="font-size: ${baseSize * 2}px; color: ${config.text_color};">
+                ${isEditing ? 'গল্প সম্পাদনা করুন' : 'নতুন গল্প লিখুন'} ✍️
+              </h2>
+              <div style="width: 120px;"></div>
+            </div>
+
+            <form onsubmit="saveStory(event)" class="space-y-6 fade-in">
+              <div class="p-8 rounded-2xl shadow-lg" style="background-color: ${config.surface_color};">
+                
+                <div class="mb-6">
+                  <label for="story-title" class="block mb-2 font-medium" style="font-size: ${baseSize * 1.1}px; color: ${config.text_color};">
+                    গল্পের শিরোনাম *
+                  </label>
+                  <input 
+                    type="text" 
+                    id="story-title" 
+                    required
+                    value="${story.title || ''}"
+                    placeholder="একটি আকর্ষণীয় শিরোনাম দিন"
+                    class="w-full px-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all"
+                    style="font-size: ${baseSize}px; border-color: ${config.background_color}; color: ${config.text_color};"
+                  >
+                </div>
+
+                <div class="mb-6">
+                  <label for="story-category" class="block mb-2 font-medium" style="font-size: ${baseSize * 1.1}px; color: ${config.text_color};">
+                    ক্যাটাগরি *
+                  </label>
+                  <select 
+                    id="story-category" 
+                    required
+                    class="w-full px-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all"
+                    style="font-size: ${baseSize}px; border-color: ${config.background_color}; color: ${config.text_color};"
+                  >
+                    <option value="">ক্যাটাগরি নির্বাচন করুন</option>
+                    ${Object.keys(categoryColors).map(cat => `
+                      <option value="${cat}" ${story.category === cat ? 'selected' : ''}>${cat}</option>
+                    `).join('')}
+                  </select>
+                </div>
+
+                ${story.prompt ? `
+                <div class="mb-6 p-4 rounded-lg" style="background-color: ${config.background_color};">
+                  <label class="block mb-2 font-medium" style="font-size: ${baseSize * 1.1}px; color: ${config.text_color};">
+                    প্রম্পট (অনুপ্রেরণা)
+                  </label>
+                  <p style="font-size: ${baseSize * 0.95}px; line-height: 1.6; color: ${config.text_color}; opacity: 0.8;">
+                    ${story.prompt}
+                  </p>
+                </div>
+                ` : ''}
+
+                <div class="mb-6">
+                  <label for="story-content" class="block mb-2 font-medium" style="font-size: ${baseSize * 1.1}px; color: ${config.text_color};">
+                    গল্প লিখুন *
+                  </label>
+                  <textarea 
+                    id="story-content" 
+                    required
+                    placeholder="এখানে আপনার সৃজনশীল গল্প লিখুন..."
+                    class="w-full px-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all"
+                    style="font-size: ${baseSize}px; min-height: 300px; border-color: ${config.background_color}; color: ${config.text_color}; line-height: 1.8;"
+                  >${story.story || ''}</textarea>
+                  <p style="font-size: ${baseSize * 0.85}px; color: ${config.text_color}; opacity: 0.6; margin-top: 8px;">
+                    শব্দ সংখ্যা: <span id="word-count">0</span>
+                  </p>
+                </div>
+
+                <div class="flex gap-4">
+                  <button 
+                    type="submit" 
+                    id="save-btn"
+                    class="flex-1 px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105"
+                    style="background-color: ${config.primary_action_color}; color: white; font-size: ${baseSize * 1.1}px;"
+                  >
+                    ${isEditing ? '✓ সংরক্ষণ করুন' : '💾 গল্প সংরক্ষণ করুন'}
+                  </button>
+                  ${isEditing ? `
+                  <button 
+                    type="button"
+                    onclick="deleteStory('${story.id}')"
+                    id="delete-btn"
+                    class="px-6 py-3 rounded-lg font-medium transition-all"
+                    style="background-color: #ef4444; color: white; font-size: ${baseSize * 1.1}px;"
+                  >
+                    🗑️ মুছুন
+                  </button>
+                  ` : ''}
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+
+      // Word counter
+      const textarea = document.getElementById('story-content');
+      const wordCount = document.getElementById('word-count');
+      
+      function updateWordCount() {
+        const text = textarea.value.trim();
+        const words = text ? text.split(/\s+/).length : 0;
+        wordCount.textContent = words;
+      }
+      
+      textarea.addEventListener('input', updateWordCount);
+      updateWordCount();
+    }
+
+    function saveStory(event) {
+      event.preventDefault();
+      
+      const saveBtn = document.getElementById('save-btn');
+      const originalText = saveBtn.innerHTML;
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<div class="loading-spinner mx-auto"></div>';
+
+      const title = document.getElementById('story-title').value;
+      const category = document.getElementById('story-category').value;
+      const storyContent = document.getElementById('story-content').value;
+
+      const storyData = {
+        id: editingStoryId || Date.now().toString(),
+        title: title,
+        category: category,
+        prompt: currentStory.prompt || '',
+        story: storyContent,
+        createdAt: editingStoryId ? (stories.find(s => s.id === editingStoryId).createdAt) : new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      if (editingStoryId) {
+        // Update existing story
+        stories = stories.map(s => s.id === editingStoryId ? storyData : s);
+      } else {
+        // Add new story
+        stories.push(storyData);
+      }
+
+      const success = saveStories(stories);
+
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = originalText;
+
+      if (success) {
+        showToast(editingStoryId ? '✓ গল্প আপডেট হয়েছে!' : '✓ গল্প সংরক্ষিত হয়েছে!', 'success');
+        editingStoryId = null;
+        currentStory = { title: '', category: '', prompt: '', story: '' };
+        setTimeout(() => showSavedStories(), 1000);
+      } else {
+        showToast('❌ সংরক্ষণে সমস্যা হয়েছে। আবার চেষ্টা করুন।', 'error');
+      }
+    }
+
+    function deleteStory(storyId) {
+      const deleteBtn = document.getElementById('delete-btn');
+      const saveBtn = document.getElementById('save-btn');
+      
+      if (deleteBtn.textContent.includes('নিশ্চিত')) {
+        deleteBtn.disabled = true;
+        saveBtn.disabled = true;
+        deleteBtn.innerHTML = '<div class="loading-spinner mx-auto"></div>';
+        
+        stories = stories.filter(s => s.id !== storyId);
+        const success = saveStories(stories);
+        
+        if (success) {
+          showToast('✓ গল্প মুছে ফেলা হয়েছে', 'success');
+          editingStoryId = null;
+          setTimeout(() => showSavedStories(), 800);
+        } else {
+          showToast('❌ মুছতে সমস্যা হয়েছে', 'error');
+          deleteBtn.disabled = false;
+          saveBtn.disabled = false;
+          deleteBtn.textContent = '🗑️ মুছুন';
+        }
+      } else {
+        deleteBtn.textContent = '✓ নিশ্চিত করুন?';
+        deleteBtn.style.backgroundColor = '#dc2626';
+        setTimeout(() => {
+          if (deleteBtn) {
+            deleteBtn.textContent = '🗑️ মুছুন';
+            deleteBtn.style.backgroundColor = '#ef4444';
+          }
+        }, 3000);
+      }
+    }
+
+    function showSavedStories() {
+      currentView = 'saved';
+      renderSavedStories();
+    }
+
+    function renderSavedStories() {
+      const baseSize = config.font_size;
+      
+      const app = document.getElementById('app');
+      app.style.backgroundColor = config.background_color;
+      
+      app.innerHTML = `
+        <div class="min-h-full" style="background: linear-gradient(135deg, ${config.background_color} 0%, ${adjustColor(config.background_color, -10)} 100%);">
+          <div class="max-w-6xl mx-auto px-4 py-8">
+            <div class="flex items-center justify-between mb-8">
+              <button onclick="renderHome()" class="px-4 py-2 rounded-lg font-medium transition-colors" style="background-color: ${config.surface_color}; color: ${config.text_color}; font-size: ${baseSize}px;">
+                ← হোমে ফিরুন
+              </button>
+              <h2 class="decorative-font" style="font-size: ${baseSize * 2}px; color: ${config.text_color};">
+                সংরক্ষিত গল্প 📚
+              </h2>
+              <div class="px-4 py-2 rounded-lg" style="background-color: ${config.surface_color}; font-size: ${baseSize}px; color: ${config.text_color};">
+                মোট: ${stories.length}
+              </div>
+            </div>
+
+            ${stories.length === 0 ? `
+              <div class="text-center py-20 empty-state">
+                <div style="font-size: ${baseSize * 4}px; margin-bottom: 16px;">📝</div>
+                <h3 style="font-size: ${baseSize * 1.5}px; margin-bottom: 12px; color: ${config.text_color};">
+                  এখনো কোনো গল্প নেই
+                </h3>
+                <p style="font-size: ${baseSize}px; margin-bottom: 24px; color: ${config.text_color};">
+                  আপনার প্রথম গল্প লিখে শুরু করুন!
+                </p>
+                <button onclick="showCreateStory()" class="px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105" style="background-color: ${config.primary_action_color}; color: white; font-size: ${baseSize * 1.1}px;">
+                  নতুন গল্প লিখুন
+                </button>
+              </div>
+            ` : `
+              <div class="grid md:grid-cols-2 gap-6">
+                ${stories.map((story, index) => `
+                  <div class="story-card p-6 rounded-xl shadow-lg cursor-pointer fade-in" 
+                       style="background-color: ${config.surface_color}; border-left-color: ${categoryColors[story.category]}; animation-delay: ${index * 0.05}s;"
+                       onclick="editStoryById('${story.id}')">
+                    <div class="flex items-start justify-between mb-3">
+                      <span class="category-badge" style="background-color: ${categoryColors[story.category]}20; color: ${categoryColors[story.category]}; font-size: ${baseSize * 0.8}px;">
+                        ${story.category}
+                      </span>
+                      <span style="font-size: ${baseSize * 0.8}px; color: ${config.text_color}; opacity: 0.6;">
+                        ${formatDate(story.createdAt)}
+                      </span>
+                    </div>
+                    <h3 style="font-size: ${baseSize * 1.3}px; font-weight: 600; margin-bottom: 8px; color: ${config.text_color};">
+                      ${story.title}
+                    </h3>
+                    <p style="font-size: ${baseSize * 0.9}px; line-height: 1.6; color: ${config.text_color}; opacity: 0.7;">
+                      ${story.story.substring(0, 150)}${story.story.length > 150 ? '...' : ''}
+                    </p>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    function editStoryById(storyId) {
+      editingStoryId = storyId;
+      showCreateStory();
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) return 'আজ';
+      if (diffDays === 1) return 'গতকাল';
+      if (diffDays < 7) return `${diffDays} দিন আগে`;
+      
+      return date.toLocaleDateString('bn-BD', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+
+    function adjustColor(hex, percent) {
+      const num = parseInt(hex.replace('#', ''), 16);
+      const amt = Math.round(2.55 * percent);
+      const R = (num >> 16) + amt;
+      const G = (num >> 8 & 0x00FF) + amt;
+      const B = (num & 0x0000FF) + amt;
+      return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+        (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+        (B < 255 ? B < 1 ? 0 : B : 255))
+        .toString(16).slice(1);
+    }
+
+    function showToast(message, type) {
+      const baseSize = config.font_size;
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 fade-in';
+      toast.style.backgroundColor = type === 'success' ? '#10b981' : '#ef4444';
+      toast.style.color = 'white';
+      toast.style.fontSize = `${baseSize}px`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    init();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9c7c624a503eba55',t:'MTc3MDA2MzU3MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
